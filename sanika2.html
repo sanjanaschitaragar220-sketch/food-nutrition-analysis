@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NutriScan AI - Intelligent Food & Nutrition Analysis</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Chart.js for Macro Visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand-logo">
+        <div class="logo-icon">
+          <i data-lucide="sparkles"></i>
+        </div>
+        <div class="logo-text">
+          <span class="brand-name">NutriScan<span class="accent-text">AI</span></span>
+          <span class="brand-badge">v1.0 PRD</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#analyzer" class="nav-link active">Analyzer</a>
+        <a href="#samples" class="nav-link">Sample Foods</a>
+        <a href="#about" class="nav-link">How it Works</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button id="toggleApiKeyBtn" class="btn-outline-sm" title="Configure Live Gemini Vision API (Optional)">
+          <i data-lucide="key"></i>
+          <span>Live AI Mode</span>
+        </button>
+        <span class="status-pill status-ready">
+          <span class="pulse-dot"></span> System Ready
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <i data-lucide="cpu"></i> Deep Learning Computer Vision for Nutrition
+      </div>
+      <h1 class="hero-title">
+        Visual Food Recognition & <br><span class="gradient-text">Instant Nutrition Estimation</span>
+      </h1>
+      <p class="hero-subtitle">
+        Upload or choose any food photo. Our AI identifies food categories, detects meal components, 
+        and calculates calorie and macronutrient breakdown in seconds.
+      </p>
+    </div>
+  </section>
+
+  <!-- Main Analysis Workspace -->
+  <main class="main-workspace" id="analyzer">
+    <div class="workspace-grid">
+      
+      <!-- Left Column: Input, Upload & Preview Area -->
+      <section class="panel upload-panel">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <i data-lucide="camera" class="panel-icon"></i>
+            <div>
+              <h2 class="panel-title">Food Image Input</h2>
+              <p class="panel-desc">Drag & drop, upload, or choose a verified sample meal</p>
+            </div>
+          </div>
+          <button id="resetTopBtn" class="btn-ghost-sm" title="Reset all" style="display: none;">
+            <i data-lucide="rotate-ccw"></i> Reset
+          </button>
+        </div>
+
+        <!-- Drag & Drop / Upload Zone (Shown when no image is loaded) -->
+        <div id="dropZone" class="drop-zone">
+          <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp, image/heic" class="file-input-hidden">
+          
+          <div class="drop-zone-content">
+            <div class="upload-icon-circle">
+              <i data-lucide="upload-cloud"></i>
+            </div>
+            <h3 class="drop-zone-title">Drop your food photo here</h3>
+            <p class="drop-zone-subtitle">Supports JPG, PNG, WEBP (Up to 15MB)</p>
+            <div class="drop-actions">
+              <button type="button" id="browseBtn" class="btn-primary-sm">
+                <i data-lucide="image-plus"></i> Browse Files
+              </button>
+              <button type="button" id="cameraBtn" class="btn-secondary-sm" title="Use Camera">
+                <i data-lucide="camera"></i> Take Photo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Image Preview Card (Hidden until an image is selected) -->
+        <div id="previewCard" class="preview-card" style="display: none;">
+          <div class="preview-media-wrapper">
+            <img id="previewImage" src="" alt="Food Preview" class="preview-img">
+            
+            <!-- Scanning Laser Animation Overlay (Active during processing) -->
+            <div id="scannerOverlay" class="scanner-overlay" style="display: none;">
+              <div class="scanner-laser"></div>
+              <div class="scanner-grid"></div>
+              <div class="scanner-tag">SCANNING VOLUME & DETECTING INGREDIENTS...</div>
+            </div>
+
+            <!-- Image Metadata Badge -->
+            <div class="image-meta-pill" id="imageMetaPill">
+              <i data-lucide="file-check"></i> <span id="fileNameLabel">food-image.jpg</span>
+            </div>
+
+            <button id="changeImageBtn" class="change-img-btn" title="Change Image">
+              <i data-lucide="refresh-cw"></i> Replace
+            </button>
+          </div>
+
+          <!-- Controls under preview -->
+          <div class="preview-actions">
+            <button id="analyzeBtn" class="btn-cta">
+              <i data-lucide="sparkles"></i>
+              <span>Analyze Nutrition</span>
+            </button>
+            <button id="resetBtn" class="btn-secondary">
+              <i data-lucide="trash-2"></i> Clear
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Sample Picker Tray -->
+        <div class="sample-tray-section" id="samples">
+          <div class="sample-tray-header">
+            <span class="sample-tray-title">
+              <i data-lucide="layers"></i> Or test with sample food plates:
+            </span>
+            <span class="sample-hint">1-click instant load</span>
+          </div>
+
+          <div class="sample-grid" id="sampleGrid">
+            <!-- Populated via JavaScript -->
+          </div>
+        </div>
+
+        <!-- Serving Size Adjuster (Appears after analysis) -->
+        <div id="servingControl" class="serving-control-card" style="display: none;">
+          <div class="serving-header">
+            <span><i data-lucide="scale"></i> Portion Multiplier:</span>
+            <span id="servingValue" class="serving-badge">1.0x (Standard Plate)</span>
+          </div>
+          <div class="serving-buttons">
+            <button class="portion-btn" data-multiplier="0.5">0.5x (Snack)</button>
+            <button class="portion-btn active" data-multiplier="1.0">1.0x (Regular)</button>
+            <button class="portion-btn" data-multiplier="1.5">1.5x (Large)</button>
+            <button class="portion-btn" data-multiplier="2.0">2.0x (Double)</button>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- Right Column: Results & Nutrition Output Area -->
+      <section class="panel results-panel">
+        
+        <!-- State 1: Empty Placeholder (Before analysis) -->
+        <div id="emptyState" class="state-empty">
+          <div class="empty-icon-wrap">
+            <i data-lucide="utensils-crossed"></i>
+          </div>
+          <h3>Nutritional Analysis Awaits</h3>
+          <p>
+            Upload a meal photo on the left or select any sample dish, then click <strong>"Analyze Nutrition"</strong> to calculate calorie density, macronutrients, and ingredient breakdown.
+          </p>
+          <div class="empty-features-list">
+            <div class="feature-item"><i data-lucide="check-circle-2"></i> Calorie & Macro estimation</div>
+            <div class="feature-item"><i data-lucide="check-circle-2"></i> Category & confidence classification</div>
+            <div class="feature-item"><i data-lucide="check-circle-2"></i> FDA-compliant nutrition facts panel</div>
+          </div>
+        </div>
+
+        <!-- State 2: Processing / Loading State -->
+        <div id="processingState" class="state-processing" style="display: none;">
+          <div class="processing-spinner-box">
+            <div class="spinner-ring"></div>
+            <i data-lucide="sparkles" class="spinner-center-icon"></i>
+          </div>
+          <h3 class="processing-title" id="processingStatusText">Initializing AI Neural Model...</h3>
+          <p class="processing-subtext">Extracting image feature embeddings and cross-referencing USDA FoodData Central</p>
+          
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+          </div>
+
+          <div class="processing-steps" id="processingSteps">
+            <div class="step-item" id="step1"><i data-lucide="circle"></i> <span>Reading Image Pixels & Segmentation</span></div>
+            <div class="step-item" id="step2"><i data-lucide="circle"></i> <span>Detecting Ingredients & Culinary Classes</span></div>
+            <div class="step-item" id="step3"><i data-lucide="circle"></i> <span>Volumetric Density & Calorie Estimation</span></div>
+            <div class="step-item" id="step4"><i data-lucide="circle"></i> <span>Compiling Macronutrient & Mineral Profiles</span></div>
+          </div>
+        </div>
+
+        <!-- State 3: Output Results Dashboard -->
+        <div id="resultsDashboard" class="results-dashboard" style="display: none;">
+          
+          <!-- Category & Confidence Header -->
+          <div class="result-hero-card">
+            <div class="category-info">
+              <span class="sub-label">IDENTIFIED FOOD CATEGORY</span>
+              <h2 id="resultCategory" class="result-food-title">Mediterranean Grilled Salmon Bowl</h2>
+              <p id="resultDescription" class="result-food-desc">Atlantic salmon fillet served with tri-color quinoa, steamed broccoli florets and extra virgin olive oil.</p>
+              
+              <div class="tag-row" id="resultTags">
+                <!-- Injected via JS (e.g. High Protein, Gluten-Free, Omega-3) -->
+              </div>
+            </div>
+
+            <div class="confidence-box">
+              <div class="confidence-circle" id="confidenceCircle">
+                <span id="confidenceValue" class="confidence-num">97%</span>
+                <span class="confidence-label">Match</span>
+              </div>
+              <span class="ai-badge" id="aiEngineBadge"><i data-lucide="bot"></i> AI Model</span>
+            </div>
+          </div>
+
+          <!-- Total Calories Spotlight -->
+          <div class="calories-banner">
+            <div class="calories-main">
+              <div class="cal-icon"><i data-lucide="flame"></i></div>
+              <div>
+                <div class="cal-number-row">
+                  <span id="calTotal" class="cal-large-num">540</span>
+                  <span class="cal-unit">kcal</span>
+                </div>
+                <div class="cal-sublabel">Total Estimated Energy</div>
+              </div>
+            </div>
+            
+            <div class="health-score-card">
+              <div class="score-ring" id="nutriScoreRing">
+                <span id="nutriScoreLetter" class="score-letter">A</span>
+              </div>
+              <div class="score-text">
+                <span class="score-heading">Health Score</span>
+                <span id="nutriScoreDesc" class="score-sub">Nutrient Dense</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 Core Macronutrient Cards (PRD requirement: Calories, Protein, Carbs, Fats) -->
+          <div class="macro-cards-grid">
+            
+            <!-- Protein -->
+            <div class="macro-card protein-card">
+              <div class="macro-card-top">
+                <span class="macro-name"><i data-lucide="dumbbell"></i> Protein</span>
+                <span id="proteinPct" class="macro-share">31%</span>
+              </div>
+              <div class="macro-amount">
+                <span id="proteinVal">42</span><span class="unit">g</span>
+              </div>
+              <div class="macro-bar-track">
+                <div id="proteinBar" class="macro-bar-fill protein-fill" style="width: 31%;"></div>
+              </div>
+              <span class="macro-dv" id="proteinDv">84% of Daily Value</span>
+            </div>
+
+            <!-- Carbohydrates -->
+            <div class="macro-card carbs-card">
+              <div class="macro-card-top">
+                <span class="macro-name"><i data-lucide="wheat"></i> Carbs</span>
+                <span id="carbsPct" class="macro-share">33%</span>
+              </div>
+              <div class="macro-amount">
+                <span id="carbsVal">45</span><span class="unit">g</span>
+              </div>
+              <div class="macro-bar-track">
+                <div id="carbsBar" class="macro-bar-fill carbs-fill" style="width: 33%;"></div>
+              </div>
+              <span class="macro-dv" id="carbsDv">16% of Daily Value</span>
+            </div>
+
+            <!-- Total Fat -->
+            <div class="macro-card fat-card">
+              <div class="macro-card-top">
+                <span class="macro-name"><i data-lucide="droplet"></i> Total Fat</span>
+                <span id="fatPct" class="macro-share">36%</span>
+              </div>
+              <div class="macro-amount">
+                <span id="fatVal">22</span><span class="unit">g</span>
+              </div>
+              <div class="macro-bar-track">
+                <div id="fatBar" class="macro-bar-fill fat-fill" style="width: 36%;"></div>
+              </div>
+              <span class="macro-dv" id="fatDv">28% of Daily Value</span>
+            </div>
+
+            <!-- Dietary Fiber -->
+            <div class="macro-card fiber-card">
+              <div class="macro-card-top">
+                <span class="macro-name"><i data-lucide="leaf"></i> Dietary Fiber</span>
+                <span id="fiberStatus" class="macro-share">High</span>
+              </div>
+              <div class="macro-amount">
+                <span id="fiberVal">7</span><span class="unit">g</span>
+              </div>
+              <div class="macro-bar-track">
+                <div id="fiberBar" class="macro-bar-fill fiber-fill" style="width: 45%;"></div>
+              </div>
+              <span class="macro-dv" id="fiberDv">25% of Daily Value</span>
+            </div>
+
+          </div>
+
+          <!-- Tabs for Chart & Full FDA Nutrition Label -->
+          <div class="detail-tabs-section">
+            <div class="tab-buttons">
+              <button class="tab-btn active" data-tab="tab-chart">
+                <i data-lucide="pie-chart"></i> Caloric Distribution
+              </button>
+              <button class="tab-btn" data-tab="tab-fda">
+                <i data-lucide="clipboard-list"></i> FDA Nutrition Facts
+              </button>
+              <button class="tab-btn" data-tab="tab-ingredients">
+                <i data-lucide="check-square"></i> Detected Items
+              </button>
+            </div>
+
+            <!-- Tab 1: Chart View -->
+            <div id="tab-chart" class="tab-pane active">
+              <div class="chart-layout">
+                <div class="chart-canvas-wrap">
+                  <canvas id="macroDonutChart"></canvas>
+                </div>
+                <div class="chart-legend-custom">
+                  <h4>Energy Breakdown</h4>
+                  <p class="chart-legend-sub">Percentage of total calories derived from each macronutrient</p>
+                  
+                  <div class="legend-row">
+                    <span class="legend-color-dot dot-protein"></span>
+                    <span class="legend-label">Protein (4 kcal/g)</span>
+                    <span id="legendProteinVal" class="legend-val">168 kcal</span>
+                  </div>
+                  <div class="legend-row">
+                    <span class="legend-color-dot dot-carbs"></span>
+                    <span class="legend-label">Carbs (4 kcal/g)</span>
+                    <span id="legendCarbsVal" class="legend-val">180 kcal</span>
+                  </div>
+                  <div class="legend-row">
+                    <span class="legend-color-dot dot-fat"></span>
+                    <span class="legend-label">Fat (9 kcal/g)</span>
+                    <span id="legendFatVal" class="legend-val">198 kcal</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 2: FDA Style Nutrition Label -->
+            <div id="tab-fda" class="tab-pane">
+              <div class="fda-label-box">
+                <h3 class="fda-title">Nutrition Facts</h3>
+                <div class="fda-line-thick"></div>
+                <div class="fda-row-sm">
+                  <span>Serving Size</span>
+                  <span id="fdaServingSize">1 Plate (approx. 380g)</span>
+                </div>
+                <div class="fda-line-medium"></div>
+                <div class="fda-cal-row">
+                  <div>
+                    <span class="fda-cal-label">Amount Per Serving</span>
+                    <span class="fda-cal-text">Calories</span>
+                  </div>
+                  <span id="fdaCalories" class="fda-cal-num">540</span>
+                </div>
+                <div class="fda-line-medium"></div>
+                <div class="fda-right-sub">% Daily Value*</div>
+                <div class="fda-line-thin"></div>
+
+                <div class="fda-item">
+                  <span><strong>Total Fat</strong> <span id="fdaFat">22g</span></span>
+                  <span class="fda-bold" id="fdaFatDv">28%</span>
+                </div>
+                <div class="fda-item fda-indent">
+                  <span>Saturated Fat <span id="fdaSatFat">3.5g</span></span>
+                  <span class="fda-bold" id="fdaSatFatDv">18%</span>
+                </div>
+                <div class="fda-line-thin"></div>
+
+                <div class="fda-item">
+                  <span><strong>Cholesterol</strong> <span id="fdaChol">70mg</span></span>
+                  <span class="fda-bold" id="fdaCholDv">23%</span>
+                </div>
+                <div class="fda-line-thin"></div>
+
+                <div class="fda-item">
+                  <span><strong>Sodium</strong> <span id="fdaSodium">360mg</span></span>
+                  <span class="fda-bold" id="fdaSodiumDv">16%</span>
+                </div>
+                <div class="fda-line-thin"></div>
+
+                <div class="fda-item">
+                  <span><strong>Total Carbohydrate</strong> <span id="fdaCarbs">45g</span></span>
+                  <span class="fda-bold" id="fdaCarbsDv">16%</span>
+                </div>
+                <div class="fda-item fda-indent">
+                  <span>Dietary Fiber <span id="fdaFiber">7g</span></span>
+                  <span class="fda-bold" id="fdaFiberDv">25%</span>
+                </div>
+                <div class="fda-item fda-indent">
+                  <span>Total Sugars <span id="fdaSugar">3g</span></span>
+                  <span></span>
+                </div>
+                <div class="fda-line-thin"></div>
+
+                <div class="fda-item">
+                  <span><strong>Protein</strong> <span id="fdaProtein">42g</span></span>
+                  <span class="fda-bold" id="fdaProteinDv">84%</span>
+                </div>
+                <div class="fda-line-thick"></div>
+
+                <div class="fda-footnote">
+                  * Percent Daily Values are based on a 2,000 calorie diet. Your daily values may be higher or lower depending on your calorie needs.
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 3: Detected Ingredients & Components -->
+            <div id="tab-ingredients" class="tab-pane">
+              <div class="ingredients-list-wrap">
+                <h4>Computer Vision Segmented Components</h4>
+                <p class="section-subtext">The AI visual model detected the following components from the image input:</p>
+                <div class="detected-items-grid" id="detectedItemsGrid">
+                  <!-- Injected via JS -->
+                </div>
+
+                <div class="dietary-advice-card">
+                  <div class="advice-header">
+                    <i data-lucide="lightbulb"></i>
+                    <span>Nutritionist Recommendation</span>
+                  </div>
+                  <p id="dietaryAdviceText">
+                    Excellent balance of lean Omega-3 fatty acids and complex slow-burning carbohydrates. Ideal post-workout or clean dinner meal.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Action Buttons -->
+          <div class="results-actions-bar">
+            <button id="printReportBtn" class="btn-outline-sm">
+              <i data-lucide="printer"></i> Print / Save Report
+            </button>
+            <button id="copyJsonBtn" class="btn-outline-sm">
+              <i data-lucide="copy"></i> Copy JSON Data
+            </button>
+            <button id="resetBottomBtn" class="btn-primary-sm">
+              <i data-lucide="plus-circle"></i> Analyze Another Meal
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- How It Works & Architecture Section -->
+  <section class="info-section" id="about">
+    <div class="info-container">
+      <div class="section-header">
+        <span class="badge-pill">HOW IT WORKS</span>
+        <h2>How the AI Nutrition Pipeline Works</h2>
+        <p>A multi-stage pipeline designed for instant dietary estimations from food photography.</p>
+      </div>
+
+      <div class="pipeline-grid">
+        <div class="pipeline-card">
+          <div class="step-num">01</div>
+          <div class="step-icon"><i data-lucide="scan"></i></div>
+          <h3>Object Detection & Segmentation</h3>
+          <p>Scans the image matrix for culinary geometry, separating the foreground plate from background artifacts.</p>
+        </div>
+
+        <div class="pipeline-card">
+          <div class="step-num">02</div>
+          <div class="step-icon"><i data-lucide="layers"></i></div>
+          <h3>Classification & Volumetrics</h3>
+          <p>Identifies multi-label food classes (proteins, carbs, lipids) and estimates relative portion mass based on depth.</p>
+        </div>
+
+        <div class="pipeline-card">
+          <div class="step-num">03</div>
+          <div class="step-icon"><i data-lucide="database"></i></div>
+          <h3>Nutrient Database Mapping</h3>
+          <p>Cross-references identified food items against verified nutritional datasets (USDA FoodData Central / McCance & Widdowson).</p>
+        </div>
+
+        <div class="pipeline-card">
+          <div class="step-num">04</div>
+          <div class="step-icon"><i data-lucide="pie-chart"></i></div>
+          <h3>Real-time Macro Synthesis</h3>
+          <p>Generates final calorie metrics, macronutrient split (Protein/Carb/Fat), micronutrients, and health scores.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <div class="logo-icon-sm"><i data-lucide="sparkles"></i></div>
+        <span>NutriScan AI &bull; Intelligent Food Nutrition Analysis System</span>
+      </div>
+      <p class="footer-disclaimer">
+        Disclaimer: Nutritional estimations are generated for general fitness and dietary guidance. Consult a certified clinical dietitian for medical nutrition therapy.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Modal: Live Gemini API Key Configuration (Optional Advanced Feature) -->
+  <div id="apiKeyModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i data-lucide="zap" class="accent-icon"></i>
+          <h3>Configure Live Gemini Vision AI</h3>
+        </div>
+        <button id="closeModalBtn" class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>
+          By default, NutriScan AI uses our built-in <strong>Smart Food Nutrition Neural Simulation</strong> with verified nutritional datasets for immediate zero-friction testing.
+        </p>
+        <p>
+          Want to analyze <em>any real-world food photo</em> using live Google Gemini Multimodal Vision API? Paste your Gemini API key below:
+        </p>
+
+        <div class="form-group">
+          <label for="geminiApiKeyInput">Gemini API Key (Optional):</label>
+          <div class="input-with-button">
+            <input type="password" id="geminiApiKeyInput" placeholder="AIzaSy..." class="text-input">
+            <button id="toggleKeyVisibility" class="btn-ghost-sm" type="button"><i data-lucide="eye"></i></button>
+          </div>
+          <small class="form-hint">Stored strictly in your local browser session storage; never transmitted elsewhere.</small>
+        </div>
+
+        <div class="modal-alert">
+          <i data-lucide="shield-check"></i>
+          <div>
+            <strong>No key? No problem!</strong> Our built-in Smart Neural Mode includes high-accuracy analyses for samples and heuristic custom uploads.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="clearKeyBtn" class="btn-secondary-sm">Clear Key</button>
+        <button id="saveKeyBtn" class="btn-primary-sm">Save & Use Live API</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Modal for Live Capture -->
+  <div id="cameraModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content camera-modal-content">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <i data-lucide="camera" class="accent-icon"></i>
+          <h3>Snap Food Photo</h3>
+        </div>
+        <button id="closeCameraBtn" class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body camera-modal-body">
+        <video id="cameraVideo" autoplay playsinline class="camera-stream"></video>
+        <canvas id="cameraCanvas" style="display: none;"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelCaptureBtn" class="btn-secondary-sm">Cancel</button>
+        <button id="captureSnapshotBtn" class="btn-primary-sm"><i data-lucide="camera"></i> Capture & Use</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast-notification">
+    <i data-lucide="check-circle" id="toastIcon"></i>
+    <span id="toastMsg">Notification message</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
